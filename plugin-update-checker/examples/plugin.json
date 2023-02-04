@@ -1,0 +1,8 @@
+ {
+ 	"name" : "AnonyEngine REST API",
+ 	"version" : "1.0.0",
+ 	"download_url" : "#",
+ 	"sections" : {
+ 		"description" : "Custom end points for REST API"
+ 	}
+ }
