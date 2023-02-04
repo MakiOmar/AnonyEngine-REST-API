@@ -37,7 +37,7 @@ $myUpdateChecker = Puc_v4_Factory::buildUpdateChecker(
 );
 
 //Set the branch that contains the stable release.
-$myUpdateChecker->setBranch('main');
+$myUpdateChecker->setBranch('master');
 
 /**
  * Display a notification if one of required plugins is not activated/installed
