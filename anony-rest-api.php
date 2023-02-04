@@ -3,7 +3,7 @@
  * Plugin Name: AnonyEngine Rest API
  * Plugin URI: https://makiomar.com
  * Description: Custom API endpoints
- * Version: 1.0.0
+ * Version: 1.0.01
  *
  * @package  AnonyEngine
  * Author: Mohammad Omar

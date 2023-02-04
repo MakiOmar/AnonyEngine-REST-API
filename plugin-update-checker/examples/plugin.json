@@ -1,6 +1,6 @@
  {
  	"name" : "AnonyEngine REST API",
- 	"version" : "1.0.0",
+ 	"version" : "1.0.01",
  	"download_url" : "https://github.com/MakiOmar/AnonyEngine-REST-API/archive/refs/heads/main.zip",
  	"sections" : {
  		"description" : "Custom end points for REST API"
