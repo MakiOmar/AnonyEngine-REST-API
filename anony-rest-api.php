@@ -14,6 +14,30 @@
  
  defined( 'ABSPATH' ) || die();
 
+ /**
+ * Holds plugin's slug
+ *
+ * @const
+ */
+define( 'ANORAPI_PLUGIN_SLUG', plugin_basename(__FILE__) );
+
+/**
+ * Holds plugin's path
+ *
+ * @const
+ */
+define( 'ANORAPI_DIR', wp_normalize_path( plugin_dir_path( __FILE__ ) ) );
+
+require ANORAPI_DIR . '/plugin-update-checker/plugin-update-checker.php';
+
+$myUpdateChecker = Puc_v4_Factory::buildUpdateChecker(
+    'https://github.com/MakiOmar/AAnonyEngine-REST-API/',
+    __FILE__,
+    ANORAPI_PLUGIN_SLUG
+);
+
+//Set the branch that contains the stable release.
+$myUpdateChecker->setBranch('main');
 
 /**
  * Display a notification if one of required plugins is not activated/installed
