@@ -3,7 +3,7 @@
  * Plugin Name: AnonyEngine Rest API
  * Plugin URI: https://makiomar.com
  * Description: Custom API endpoints
- * Version: 1.0.01
+ * Version: 1.0.02
  *
  * @package  AnonyEngine
  * Author: Mohammad Omar
@@ -28,31 +28,12 @@ define( 'ANORAPI_PLUGIN_SLUG', plugin_basename(__FILE__) );
  */
 define( 'ANORAPI_DIR', wp_normalize_path( plugin_dir_path( __FILE__ ) ) );
 
-require ANORAPI_DIR . '/plugin-update-checker/plugin-update-checker.php';
-use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
-$myUpdateChecker = PucFactory::buildUpdateChecker(
-    'https://github.com/MakiOmar/AAnonyEngine-REST-API/',
-    __FILE__,
-    ANORAPI_PLUGIN_SLUG
-);
+require_once ANORAPI_DIR . 'dependancies.php'
 
-//Set the branch that contains the stable release.
-$myUpdateChecker->setBranch('main');
+if (!defined('JWT_AUTH_PLUGIN_DIR')) return;
 
-/**
- * Display a notification if one of required plugins is not activated/installed
- */
-add_action( 'admin_notices', function() {
-    if (!defined('ANOENGINE')) {
-        ?>
-        <div class="notice notice-error is-dismissible">
-            <p><?php esc_html_e( 'AnonyEngine rest api plugin requires AnonyEngine plugin to be installed/activated. Please install/activate AnonyEngine plugin first.' ); ?></p>
-        </div>
-    <?php }
-});
- 
- add_filter( 'jwt_auth_whitelist', function ( $endpoints ) {
+add_filter( 'jwt_auth_whitelist', function ( $endpoints ) {
     $your_endpoints = array(
         '/wp-json/smpg/v2/register',
         '/wp-json/bdpwr/v1/reset-password',
