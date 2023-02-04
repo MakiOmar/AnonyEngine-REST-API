@@ -29,8 +29,9 @@ define( 'ANORAPI_PLUGIN_SLUG', plugin_basename(__FILE__) );
 define( 'ANORAPI_DIR', wp_normalize_path( plugin_dir_path( __FILE__ ) ) );
 
 require ANORAPI_DIR . '/plugin-update-checker/plugin-update-checker.php';
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
-$myUpdateChecker = Puc_v4_Factory::buildUpdateChecker(
+$myUpdateChecker = PucFactory::buildUpdateChecker(
     'https://github.com/MakiOmar/AAnonyEngine-REST-API/',
     __FILE__,
     ANORAPI_PLUGIN_SLUG
