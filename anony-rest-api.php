@@ -29,7 +29,7 @@ define( 'ANORAPI_PLUGIN_SLUG', plugin_basename(__FILE__) );
 define( 'ANORAPI_DIR', wp_normalize_path( plugin_dir_path( __FILE__ ) ) );
 
 
-require_once ANORAPI_DIR . 'dependancies.php'
+require_once ANORAPI_DIR . 'dependancies.php';
 
 if (!defined('JWT_AUTH_PLUGIN_DIR')) return;
 
