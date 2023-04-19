@@ -28,8 +28,20 @@ define( 'ANORAPI_PLUGIN_SLUG', plugin_basename(__FILE__) );
  */
 define( 'ANORAPI_DIR', wp_normalize_path( plugin_dir_path( __FILE__ ) ) );
 
+/**
+ * Holds plugin's path
+ *
+ * @const
+ */
+define( 'ANORAPI_SITE_URL', site_url());
+define( 'ANORAPI_CK', 'ck_a1507fcc2bb65ed5b660523200416b93dd6a710a');
+define( 'ANORAPI_CS', 'cs_20e3df4f264755d76e0a7275151eccf58aab8230');
 
+
+require_once ANORAPI_DIR . 'functions/helper.php';
 require_once ANORAPI_DIR . 'dependancies.php';
+require_once ANORAPI_DIR . 'auth/register.php';
+require_once ANORAPI_DIR . 'products/get-products.php';
 
 if (!defined('JWT_AUTH_PLUGIN_DIR')) return;
 
