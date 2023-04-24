@@ -34,8 +34,8 @@ define( 'ANORAPI_DIR', wp_normalize_path( plugin_dir_path( __FILE__ ) ) );
  * @const
  */
 define( 'ANORAPI_SITE_URL', site_url());
-define( 'ANORAPI_CK', 'ck_a1507fcc2bb65ed5b660523200416b93dd6a710a');
-define( 'ANORAPI_CS', 'cs_20e3df4f264755d76e0a7275151eccf58aab8230');
+define( 'ANORAPI_CK', '');
+define( 'ANORAPI_CS', '');
 
 
 
