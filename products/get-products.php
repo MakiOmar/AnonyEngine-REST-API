@@ -11,6 +11,15 @@ function register_custom_api_endpoints() {
     register_rest_route( 'anony', '/woo/home', array(
         'methods' => 'GET',
         'callback' => 'anony_get_home_data',
+        'permission_callback' => '__return_true',
+
+    ) );
+	
+	register_rest_route( 'anony', '/woo/brands', array(
+        'methods' => 'GET',
+        'callback' => 'anony_get_brands',
+        'permission_callback' => '__return_true',
+
     ) );
 
 }
@@ -18,7 +27,7 @@ function register_custom_api_endpoints() {
 function anony_get_home_data() {
     $result = array(
         'product_categories' => get_product_categories(),
-        'brands' => get_brands(),
+        'brands' => anony_get_brands(),
         'recent_products' => get_recent_products(),
         'featured_products' => get_featured_products(),
         'best_sellers' => get_best_sellers(),
@@ -50,7 +59,7 @@ function get_product_categories() {
     return $result;
 }
 
-function get_brands() {
+function anony_get_brands() {
     $brands = get_terms( 'pa_brand', array(
         'parent' => 0,
         'hide_empty' => false,
@@ -58,13 +67,13 @@ function get_brands() {
 
     $result = array();
     foreach ( $brands as $brand ) {
-        $thumbnail_id = get_term_meta( $brand->term_id, 'thumbnail_id', true );
+        $thumbnail_id = get_term_meta( $brand->term_id, 'image', true );
         $thumbnail = wp_get_attachment_url( $thumbnail_id );
 
         $brand_data = array(
             'id' => $brand->term_id,
             'name' => $brand->name,
-            'thumbnail' => $thumbnail,
+            'thumbnail' => $thumbnail_id,
         );
 
         $result[] = $brand_data;
