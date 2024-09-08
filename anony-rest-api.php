@@ -55,7 +55,7 @@ function anony_woo_rest_api() {
 
     require_once ANORAPI_DIR . 'products/get-products.php';
 	//require_once ANORAPI_DIR . 'products/add-to-cart.php';
-	require_once ANORAPI_DIR . 'woodmart/brand-banner.php';
+	//require_once ANORAPI_DIR . 'woodmart/brand-banner.php';
 }
 
 
