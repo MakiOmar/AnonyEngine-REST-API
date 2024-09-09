@@ -1,9 +1,30 @@
 <?php
-class AdeWooCart {
+/**
+ * Cart API
+ *
+ * @package AnonyEngine Rest API
+ */
 
+defined( 'ABSPATH' ) || die;
+
+/**
+ * Cart API
+ */
+class Ade_WooCart {
+	/**
+	 * User object
+	 *
+	 * @var object
+	 */
 	public $user;
 
+	/**
+	 * Initialization function
+	 *
+	 * @return void
+	 */
 	public function init() {
+		// phpcs:disable
 		add_filter(
 			'determine_current_user',
 			function ( $user_id ) {
@@ -15,10 +36,15 @@ class AdeWooCart {
 				return $user_id;
 			}
 		);
-		// rest api init
+		// phpcs:enable
+		// rest api init.
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
 	}
-
+	/**
+	 * API Routes
+	 *
+	 * @return void
+	 */
 	public function register_routes() {
 		register_rest_route(
 			'ade-woocart/v1',
@@ -40,7 +66,7 @@ class AdeWooCart {
 			)
 		);
 
-		// remove from cart
+		// remove from cart.
 		register_rest_route(
 			'ade-woocart/v1',
 			'/cart/(?P<key>\w+)',
@@ -52,7 +78,11 @@ class AdeWooCart {
 		);
 	}
 
-	// woo support
+	/**
+	 * Check WooCommerce required files
+	 *
+	 * @return bool
+	 */
 	public function check_woo_files() {
 		if ( defined( 'WC_ABSPATH' ) ) {
 			// WC 3.6+ - Cart and other frontend functions are not included for REST requests.
@@ -70,24 +100,12 @@ class AdeWooCart {
 			WC()->session->init();
 		}
 
-		if (
-			null === WC()->customer
-		) {
-			/*
-			if( !empty( $_POST['user_id'] ) ){
-				$user_id = wp_strip_all_tags( $_POST['user_id'] );
-			}else{
-				$user_id = get_current_user_id();
-			}*/
-			// WC()->customer = new WC_Customer(get_current_user_id(), true);
-			WC()->customer = new WC_Customer( $user_id, true );
+		if ( null === WC()->customer ) {
+			WC()->customer = new WC_Customer( get_current_user_id(), true );
 		}
 
-		if (
-			null === WC()->cart
-		) {
+		if ( null === WC()->cart ) {
 			WC()->cart = new WC_Cart();
-
 			// We need to force a refresh of the cart contents from session here (cart contents are normally refreshed on wp_loaded, which has already happened by this point).
 			WC()->cart->get_cart();
 		}
@@ -95,51 +113,44 @@ class AdeWooCart {
 		return true;
 	}
 
-	// user data
-	private function get_user_data_by_consumer_key( $consumer_key ) {
-		global $wpdb;
-
-		$consumer_key = wc_api_hash( sanitize_text_field( $consumer_key ) );
-		$user         = $wpdb->get_row(
-			$wpdb->prepare(
-				"
-			SELECT key_id, user_id, permissions, consumer_key, consumer_secret, nonces
-			FROM {$wpdb->prefix}woocommerce_api_keys
-			WHERE consumer_key = %s
-		",
-				$consumer_key
-			)
-		);
-
-		return $user;
-	}
-
-	// permissions_check
+	/**
+	 * Permissions check
+	 *
+	 * @return bool
+	 */
 	public function permissions_check() {
 
-		$current_user = wp_get_current_user();
+		$user = wp_get_current_user();
 		// Check if the user is logged in.
-		if ( $current_user->ID === 0 ) {
+		if ( 0 === $user->ID ) {
 			return false;
 		}
-		// log user
-		$this->logUser();
+		// log user in.
+		$this->log_user_in( $user );
 
 		return true;
 	}
 
-	// logUser.
-	public function logUser() {
-		$user_id = $this->user->user_id;
-		$user    = get_user_by( 'id', $user_id );
+	/**
+	 * Log user in
+	 *
+	 * @return void
+	 */
+	public function log_user_in( $user ) {
 		// if not logged in.
 		if ( ! is_user_logged_in() ) {
-			wp_set_current_user( $user_id, $user->user_login );
-			wp_set_auth_cookie( $user_id );
+			wp_clear_auth_cookie();
+			wp_set_current_user( $user->user_id, $user->user_login );
+			wp_set_auth_cookie( $user->user_id );
+			update_user_caches( $user );
 		}
 		$this->check_woo_files();
 	}
-
+	/**
+	 * Get current user cart
+	 *
+	 * @return array
+	 */
 	public function get_cart() {
 		// Ensure WooCommerce session and cart are initialized.
 		if ( null === WC()->session ) {
@@ -170,25 +181,42 @@ class AdeWooCart {
 		return $cart_data;
 	}
 
+	/**
+	 * Add to cart
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return array
+	 */
 	public function add_to_cart( WP_REST_Request $request ) {
 		$product_id = $request->get_param( 'product_id' );
 		$quantity   = $request->get_param( 'quantity' );
+		$attributes = array();
 
-		// check if product exists
+		// check if product exists.
 		if ( ! wc_get_product( $product_id ) ) {
-			return new WP_Error( 'product_not_found', 'Product not found', array( 'status' => 404 ) );
+			wp_send_json_error( 'Product not found', 404 );
 		}
-
-		// add to cart
-		WC()->cart->add_to_cart( $product_id, $quantity );
+		if ( 'product_variation' === get_post_type( $product_id ) ) {
+			$attributes = $request->get_param( 'attributes' ) ? $request->get_param( 'attributes' ) : false ;
+			if ( ! $attributes ) {
+				wp_send_json_error( 'Attributes are missing', 400 );
+			}
+		}
+		// add to cart.
+		WC()->cart->add_to_cart( $product_id, $quantity, 0, $attributes );
 
 		return $this->get_cart();
 	}
 
-	// remove_from_cart
+	/**
+	 * Remove from cart
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return array
+	 */
 	public function remove_from_cart( WP_REST_Request $request ) {
 		$key = $request->get_param( 'key' );
-		// confirm key exists
+		// confirm key exists.
 		if ( ! isset( WC()->cart->cart_contents[ $key ] ) ) {
 			return new WP_Error( 'key_not_found', 'Key not found', array( 'status' => 404 ) );
 		}
@@ -203,6 +231,6 @@ class AdeWooCart {
 	}
 }
 
-// init
-$ade_woo_cart = new AdeWooCart();
+// init.
+$ade_woo_cart = new Ade_WooCart();
 $ade_woo_cart->init();
