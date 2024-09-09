@@ -41,6 +41,7 @@ define( 'ANORAPI_CS', '' );
 
 require_once ANORAPI_DIR . 'functions/helper.php';
 require_once ANORAPI_DIR . 'classes/class-ade-woocart.php';
+require_once ANORAPI_DIR . 'classes/class-ade-woocheckout.php';
 require_once ANORAPI_DIR . 'dependancies.php';
 require_once ANORAPI_DIR . 'auth/register.php';
 

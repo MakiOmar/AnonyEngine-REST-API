@@ -77,74 +77,14 @@ class Ade_WooCart {
 			)
 		);
 	}
-
-	/**
-	 * Check WooCommerce required files
-	 *
-	 * @return bool
-	 */
-	public function check_woo_files() {
-		if ( defined( 'WC_ABSPATH' ) ) {
-			// WC 3.6+ - Cart and other frontend functions are not included for REST requests.
-			include_once WC_ABSPATH . 'includes/wc-cart-functions.php';
-			include_once WC_ABSPATH . 'includes/wc-notice-functions.php';
-			include_once WC_ABSPATH . 'includes/wc-template-hooks.php';
-		}
-
-		if (
-			null === WC()->session
-		) {
-			$session_class = apply_filters( 'woocommerce_session_handler', 'WC_Session_Handler' );
-
-			WC()->session = new $session_class();
-			WC()->session->init();
-		}
-
-		if ( null === WC()->customer ) {
-			WC()->customer = new WC_Customer( get_current_user_id(), true );
-		}
-
-		if ( null === WC()->cart ) {
-			WC()->cart = new WC_Cart();
-			// We need to force a refresh of the cart contents from session here (cart contents are normally refreshed on wp_loaded, which has already happened by this point).
-			WC()->cart->get_cart();
-		}
-
-		return true;
-	}
-
 	/**
 	 * Permissions check
 	 *
 	 * @return bool
 	 */
 	public function permissions_check() {
-
-		$user = wp_get_current_user();
-		// Check if the user is logged in.
-		if ( 0 === $user->ID ) {
-			return false;
-		}
-		// log user in.
-		$this->log_user_in( $user );
-
-		return true;
-	}
-
-	/**
-	 * Log user in
-	 *
-	 * @return void
-	 */
-	public function log_user_in( $user ) {
-		// if not logged in.
-		if ( ! is_user_logged_in() ) {
-			wp_clear_auth_cookie();
-			wp_set_current_user( $user->user_id, $user->user_login );
-			wp_set_auth_cookie( $user->user_id );
-			update_user_caches( $user );
-		}
-		$this->check_woo_files();
+		ade_check_woo_files();
+		return ade_permissions_check();
 	}
 	/**
 	 * Get current user cart
