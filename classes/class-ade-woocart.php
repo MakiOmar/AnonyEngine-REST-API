@@ -128,25 +128,35 @@ class Ade_WooCart {
 	 * @return array
 	 */
 	public function add_to_cart( WP_REST_Request $request ) {
-		$product_id = $request->get_param( 'product_id' );
-		$quantity   = $request->get_param( 'quantity' );
-		$attributes = array();
+		$products = $request->get_json_params(); // Retrieve JSON body as an array.
 
-		// check if product exists.
-		if ( ! wc_get_product( $product_id ) ) {
-			wp_send_json_error( 'Product not found', 404 );
+		if ( ! is_array( $products ) || empty( $products ) ) {
+			wp_send_json_error( 'Invalid or empty products array', 400 );
 		}
-		if ( 'product_variation' === get_post_type( $product_id ) ) {
-			$attributes = $request->get_param( 'attributes' ) ? $request->get_param( 'attributes' ) : false ;
-			if ( ! $attributes ) {
-				wp_send_json_error( 'Attributes are missing', 400 );
+
+		foreach ( $products as $product_data ) {
+			$product_id = isset( $product_data['product_id'] ) ? $product_data['product_id'] : null;
+			$quantity   = isset( $product_data['quantity'] ) ? $product_data['quantity'] : 1;
+			$attributes = isset( $product_data['attributes'] ) ? $product_data['attributes'] : array();
+
+			// Validate product ID.
+			if ( ! $product_id || ! wc_get_product( $product_id ) ) {
+				wp_send_json_error( sprintf( 'Product not found for ID %s', esc_html( $product_id ) ), 404 );
 			}
-		}
-		// add to cart.
-		WC()->cart->add_to_cart( $product_id, $quantity, 0, $attributes );
 
-		return $this->get_cart();
+			// Validate attributes for variable products.
+			if ( 'product_variation' === get_post_type( $product_id ) && empty( $attributes ) ) {
+				wp_send_json_error( sprintf( 'Attributes are missing for product ID %s', esc_html( $product_id ) ), 400 );
+			}
+
+			// Add product to cart.
+			WC()->cart->add_to_cart( $product_id, $quantity, 0, $attributes );
+		}
+
+		return $this->get_cart(); // Return updated cart.
 	}
+
+
 
 	/**
 	 * Remove from cart
