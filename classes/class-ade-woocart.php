@@ -47,6 +47,74 @@ class Ade_WooCart {
 	 */
 	public function register_routes() {
 		register_rest_route(
+			'ade-woo/v1',
+			'/user-data',
+			array(
+				'methods'             => 'GET',
+				'callback'            => 'get_current_user_data',
+				'permission_callback' => function () {
+					return true;
+				},
+			)
+		);
+		register_rest_route(
+			'ade-woo/v1',
+			'/current-user',
+			array(
+				'methods'             => 'GET',
+				'callback'            => function () {
+					$user_id = get_current_user_id(); // Get the ID of the current logged-in user
+					if ( $user_id ) {
+						return new WP_REST_Response( array( 'user_id' => $user_id ), 200 );
+					} else {
+						return new WP_REST_Response( 'User not logged in', 403 );
+					}
+				},
+				'permission_callback' => function () {
+					return is_user_logged_in(); // Ensure only logged-in users can access
+				},
+			)
+		);
+		register_rest_route(
+			'ade-woo/v1',
+			'/nonce',
+			array(
+				'methods'             => 'GET',
+				'callback'            => function () {
+					return wp_create_nonce( 'wp_rest' );
+				},
+				'permission_callback' => '__return_true',
+			)
+		);
+		register_rest_route(
+			'ade-woo/v1',
+			'/validate-auth-cookie/',
+			array(
+				'methods'             => 'GET',
+				'callback'            => 'mkh_validate_auth_cookie',
+				'permission_callback' => '__return_true',
+			)
+		);
+		register_rest_route(
+			'ade-woo/v1',
+			'/is-logged-in',
+			array(
+				'methods'             => 'GET',
+				'callback'            => 'mkh_validate_auth_cookie',
+				'permission_callback' => '__return_true',
+			)
+		);
+		// endpoints will be registered here
+		register_rest_route(
+			'ade-woo',
+			'/login',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'login' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+		register_rest_route(
 			'ade-woocart/v1',
 			'/cart',
 			array(
@@ -76,6 +144,69 @@ class Ade_WooCart {
 				'permission_callback' => '__return_true',
 			)
 		);
+	}
+	public function get_current_user_data() {
+
+		$current_user = wp_get_current_user();
+
+		if ( $current_user->ID === 0 ) {
+			return new WP_Error( 'no_user', 'User not logged in', array( 'status' => 401 ) );
+		}
+
+		return array(
+			'ID'           => $current_user->ID,
+			'display_name' => $current_user->display_name,
+			'email'        => $current_user->user_email,
+			'roles'        => $current_user->roles,
+		);
+	}
+	public function mkh_validate_auth_cookie( $request ) {
+		// Identify the correct `wordpress_logged_in_` cookie dynamically
+		$cookie_name_prefix = 'wordpress_logged_in_';
+		$cookie             = null;
+
+		foreach ( $_COOKIE as $key => $value ) {
+			if ( strpos( $key, $cookie_name_prefix ) === 0 ) {
+				$cookie = $value;
+				break;
+			}
+		}
+
+		// If the cookie is not found, return a logged-out response
+		if ( ! $cookie ) {
+			return new WP_REST_Response( array( 'isLoggedIn' => false ), 200 );
+		}
+
+		// Parse and validate the cookie
+		$cookie_data = wp_parse_auth_cookie( $cookie, 'logged_in' );
+		if ( ! $cookie_data ) {
+			return new WP_REST_Response( array( 'isLoggedIn' => false ), 200 );
+		}
+
+		// Check if the user ID is valid
+		$user_id = wp_validate_auth_cookie( $cookie, 'logged_in' );
+		if ( $user_id ) {
+			$user = get_userdata( $user_id );
+			// Set the current user context
+			wp_set_current_user( $user_id );
+			$nonce = wp_create_nonce( 'wp_rest' );
+			if ( $user ) {
+				return new WP_REST_Response(
+					array(
+						'isLoggedIn' => true,
+						'user'       => array(
+							'id'       => $user->ID,
+							'username' => $user->user_login,
+							'email'    => $user->user_email,
+						),
+						'nonce'      => $nonce,
+					),
+					200
+				);
+			}
+		}
+
+		return new WP_REST_Response( array( 'isLoggedIn' => false ), 200 );
 	}
 	/**
 	 * Permissions check
@@ -121,6 +252,21 @@ class Ade_WooCart {
 		return $cart_data;
 	}
 
+	public function login( $request ) {
+		$data                  = array();
+		$data['user_login']    = $request['user_login'];
+		$data['user_password'] = $request['user_password'];
+		$data['remember']      = true;
+		$user                  = wp_signon( $data, false );
+
+		if ( ! is_wp_error( $user ) ) {
+			return $user;
+		} else {
+			return array( 'message' => $user->get_error_message() );
+		}
+	}
+
+
 	/**
 	 * Add to cart
 	 *
@@ -132,7 +278,7 @@ class Ade_WooCart {
 		try {
 			if ( ! WC()->session ) {
 				$session_class = apply_filters( 'woocommerce_session_handler', 'WC_Session_Handler' );
-				WC()->session = new $session_class();
+				WC()->session  = new $session_class();
 				WC()->session->init();
 			}
 		} catch ( Exception $e ) {
@@ -142,7 +288,7 @@ class Ade_WooCart {
 		// Ensure the WooCommerce cart is available.
 		if ( ! WC()->cart ) {
 			WC()->customer = new WC_Customer();
-			WC()->cart = new WC_Cart();
+			WC()->cart     = new WC_Cart();
 		}
 
 		$products = $request->get_json_params(); // Retrieve JSON body as an array.
