@@ -260,9 +260,26 @@ class Ade_WooCart {
 		$user                  = wp_signon( $data, false );
 
 		if ( ! is_wp_error( $user ) ) {
-			return $user;
+			return new WP_REST_Response(
+				array(
+					'isLoggedIn' => true,
+					'user'       => array(
+						'id'       => $user->ID,
+						'username' => $user->user_login,
+						'email'    => $user->user_email,
+					),
+					'nonce'      => wp_create_nonce( 'wp_rest' ),
+				),
+				200
+			);
 		} else {
-			return array( 'message' => $user->get_error_message() );
+			return new WP_REST_Response(
+				array(
+					'isLoggedIn' => false,
+					'message'    => $user->get_error_message(),
+				),
+				401
+			);
 		}
 	}
 
