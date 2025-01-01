@@ -129,11 +129,14 @@ class Ade_WooCart {
 	 */
 	public function add_to_cart( WP_REST_Request $request ) {
 		// Ensure WooCommerce session is started.
-		if ( ! WC()->session ) {
-			// Manually initialize the session.
-			$session_class = apply_filters( 'woocommerce_session_handler', 'WC_Session_Handler' );
-			WC()->session = new $session_class();
-			WC()->session->init();
+		try {
+			if ( ! WC()->session ) {
+				$session_class = apply_filters( 'woocommerce_session_handler', 'WC_Session_Handler' );
+				WC()->session = new $session_class();
+				WC()->session->init();
+			}
+		} catch ( Exception $e ) {
+			return wp_send_json_error( 'Failed to initialize WooCommerce session: ' . $e->getMessage(), 500 );
 		}
 
 		// Ensure the WooCommerce cart is available.
@@ -145,29 +148,31 @@ class Ade_WooCart {
 		$products = $request->get_json_params(); // Retrieve JSON body as an array.
 
 		if ( ! is_array( $products ) || empty( $products ) ) {
-			wp_send_json_error( 'Invalid or empty products array', 400 );
+			return wp_send_json_error( 'Invalid or empty products array', 400 );
 		}
 
 		foreach ( $products as $product_data ) {
-			$product_id = isset( $product_data['product_id'] ) ? $product_data['product_id'] : null;
-			$quantity   = isset( $product_data['quantity'] ) ? $product_data['quantity'] : 1;
+			$product_id = isset( $product_data['product_id'] ) ? absint( $product_data['product_id'] ) : null;
+			$quantity   = isset( $product_data['quantity'] ) ? absint( $product_data['quantity'] ) : 1;
 			$attributes = isset( $product_data['attributes'] ) ? $product_data['attributes'] : array();
 
 			// Validate product ID.
 			if ( ! $product_id || ! wc_get_product( $product_id ) ) {
-				wp_send_json_error( sprintf( 'Product not found for ID %s', esc_html( $product_id ) ), 404 );
+				return wp_send_json_error( sprintf( 'Product not found for ID %s', esc_html( $product_id ) ), 404 );
 			}
 
 			// Validate attributes for variable products.
 			if ( 'product_variation' === get_post_type( $product_id ) && empty( $attributes ) ) {
-				wp_send_json_error( sprintf( 'Attributes are missing for product ID %s', esc_html( $product_id ) ), 400 );
+				return wp_send_json_error( sprintf( 'Attributes are missing for product ID %s', esc_html( $product_id ) ), 400 );
 			}
 
 			// Add product to cart.
 			WC()->cart->add_to_cart( $product_id, $quantity, 0, $attributes );
+
+			// Handle session cookie for guest users.
 			$user = wp_get_current_user();
-			if ( 0 == $user->ID ) {
-				wc()->session->set_customer_session_cookie(true);
+			if ( 0 === $user->ID && WC()->session ) {
+				WC()->session->set_customer_session_cookie( true );
 			}
 		}
 
