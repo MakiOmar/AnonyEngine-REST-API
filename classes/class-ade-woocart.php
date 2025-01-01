@@ -52,7 +52,7 @@ class Ade_WooCart {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'get_cart' ),
-				'permission_callback' => array( $this, 'permissions_check' ),
+				'permission_callback' => '__return_true',
 			)
 		);
 
@@ -62,7 +62,7 @@ class Ade_WooCart {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'add_to_cart' ),
-				'permission_callback' => array( $this, 'permissions_check' ),
+				'permission_callback' => '__return_true',
 			)
 		);
 
@@ -73,7 +73,7 @@ class Ade_WooCart {
 			array(
 				'methods'             => 'DELETE',
 				'callback'            => array( $this, 'remove_from_cart' ),
-				'permission_callback' => array( $this, 'permissions_check' ),
+				'permission_callback' => '__return_true',
 			)
 		);
 	}
@@ -128,6 +128,20 @@ class Ade_WooCart {
 	 * @return array
 	 */
 	public function add_to_cart( WP_REST_Request $request ) {
+		// Ensure WooCommerce session is started.
+		if ( ! WC()->session ) {
+			// Manually initialize the session.
+			$session_class = apply_filters( 'woocommerce_session_handler', 'WC_Session_Handler' );
+			WC()->session = new $session_class();
+			WC()->session->init();
+		}
+
+		// Ensure the WooCommerce cart is available.
+		if ( ! WC()->cart ) {
+			WC()->customer = new WC_Customer();
+			WC()->cart = new WC_Cart();
+		}
+
 		$products = $request->get_json_params(); // Retrieve JSON body as an array.
 
 		if ( ! is_array( $products ) || empty( $products ) ) {
@@ -151,6 +165,10 @@ class Ade_WooCart {
 
 			// Add product to cart.
 			WC()->cart->add_to_cart( $product_id, $quantity, 0, $attributes );
+			$user = wp_get_current_user();
+			if ( 0 == $user->ID ) {
+				wc()->session->set_customer_session_cookie(true);
+			}
 		}
 
 		return $this->get_cart(); // Return updated cart.
