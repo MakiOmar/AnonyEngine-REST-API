@@ -11,6 +11,7 @@ defined( 'ABSPATH' ) || die;
  * Cart API
  */
 class Ade_WooCart {
+	private $nonce;
 	/**
 	 * User object
 	 *
@@ -80,8 +81,9 @@ class Ade_WooCart {
 			'/nonce',
 			array(
 				'methods'             => 'GET',
-				'callback'            => function () {
-					return wp_create_nonce( 'wp_rest' );
+				'callback'            => function ( $request ) {
+					$this->mkh_validate_auth_cookie( $request );
+					return $this->nonce;
 				},
 				'permission_callback' => '__return_true',
 			)
@@ -189,7 +191,7 @@ class Ade_WooCart {
 			$user = get_userdata( $user_id );
 			// Set the current user context
 			wp_set_current_user( $user_id );
-			$nonce = wp_create_nonce( 'wp_rest' );
+			$this->nonce = wp_create_nonce( 'wp_rest' );
 			if ( $user ) {
 				return new WP_REST_Response(
 					array(
@@ -199,7 +201,7 @@ class Ade_WooCart {
 							'username' => $user->user_login,
 							'email'    => $user->user_email,
 						),
-						'nonce'      => $nonce,
+						'nonce'      => $this->nonce,
 					),
 					200
 				);
