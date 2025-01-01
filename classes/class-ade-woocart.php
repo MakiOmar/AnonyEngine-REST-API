@@ -291,6 +291,9 @@ class Ade_WooCart {
 	 * @return array
 	 */
 	public function add_to_cart( WP_REST_Request $request ) {
+		if (null === WC()->cart) {
+			wc_load_cart();
+		}
 		// Ensure WooCommerce session is started.
 		try {
 			if ( ! WC()->session ) {
