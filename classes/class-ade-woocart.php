@@ -47,12 +47,17 @@ class Ade_WooCart {
 	 * @return void
 	 */
 	public function register_routes() {
+		register_rest_route( 'ade-woocart/v1', '/coupons', array(
+			'methods' => 'POST',
+			'callback' => array( $this, 'apply_coupon_to_cart'),
+			'permission_callback' => '__return_true', // Or implement proper permission checking
+		));
 		register_rest_route(
 			'ade-woo/v1',
 			'/user-data',
 			array(
 				'methods'             => 'GET',
-				'callback'            => 'get_current_user_data',
+				'callback'            => array( $this, 'get_current_user_data' ),
 				'permission_callback' => function () {
 					return true;
 				},
@@ -93,7 +98,7 @@ class Ade_WooCart {
 			'/validate-auth-cookie/',
 			array(
 				'methods'             => 'GET',
-				'callback'            => 'mkh_validate_auth_cookie',
+				'callback'            => array( $this, 'mkh_validate_auth_cookie' ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -102,7 +107,7 @@ class Ade_WooCart {
 			'/is-logged-in',
 			array(
 				'methods'             => 'GET',
-				'callback'            => 'mkh_validate_auth_cookie',
+				'callback'            => array( $this, 'mkh_validate_auth_cookie' ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -146,6 +151,71 @@ class Ade_WooCart {
 				'permission_callback' => '__return_true',
 			)
 		);
+	}
+	/**
+	 * Get detailed cart information.
+	 */
+	public function get_cart_details() {
+		$cart_items = array();
+
+		foreach ( WC()->cart->get_cart() as $cart_item_key => $cart_item ) {
+			$product = wc_get_product( $cart_item['product_id'] );
+
+			$cart_items[] = array(
+				'product_id'   => $cart_item['product_id'],
+				'product_name' => $product->get_name(),
+				'quantity'     => $cart_item['quantity'],
+				'line_total'   => wc_price( $cart_item['line_total'] ),
+				'line_subtotal'=> wc_price( $cart_item['line_subtotal'] ),
+				'product_image'=> wp_get_attachment_image_url( $product->get_image_id(), 'thumbnail' ),
+			);
+		}
+
+		$cart_totals = array(
+			'subtotal'     => wc_price( WC()->cart->get_subtotal() ),
+			'discount'     => wc_price( WC()->cart->get_discount_total() ),
+			'total'        => wc_price( WC()->cart->get_total() ),
+		);
+
+		return array(
+			'items'  => $cart_items,
+			'totals' => $cart_totals,
+		);
+	}
+
+	/**
+	 * Apply a coupon to the cart.
+	 */
+	public function apply_coupon_to_cart( WP_REST_Request $request ) {
+		$coupon_code = sanitize_text_field( $request->get_param( 'coupon_code' ) );
+
+		if ( empty( $coupon_code ) ) {
+			return new WP_REST_Response( array(
+				'success' => false,
+				'message' => 'Coupon code is required.',
+			), 400 );
+		}
+
+		// Apply the coupon to the cart
+		WC()->cart->apply_coupon( $coupon_code );
+		WC()->cart->calculate_totals();
+
+		// Check if the coupon was applied successfully
+		if ( in_array( $coupon_code, WC()->cart->get_applied_coupons(), true ) ) {
+			// Get updated cart details
+			$cart_details = $this->get_cart_details();
+
+			return new WP_REST_Response( array(
+				'success' => true,
+				'message' => 'Coupon applied successfully.',
+				'cart'    => $cart_details,
+			), 200 );
+		} else {
+			return new WP_REST_Response( array(
+				'success' => false,
+				'message' => 'Invalid coupon code or not applicable.',
+			), 400 );
+		}
 	}
 	public function get_current_user_data() {
 
