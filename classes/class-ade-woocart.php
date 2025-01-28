@@ -195,7 +195,17 @@ class Ade_WooCart {
 				'message' => 'Coupon code is required.',
 			), 400 );
 		}
+		// Ensure WooCommerce session and cart are initialized.
+		if ( null === WC()->session ) {
+			WC()->session = new WC_Session_Handler();
+			WC()->session->init();
+		}
 
+		if ( null === WC()->cart ) {
+			WC()->cart = new WC_Cart();
+		}
+		// Restore the cart for the session.
+		WC()->cart->get_cart_from_session();
 		// Apply the coupon to the cart
 		WC()->cart->apply_coupon( $coupon_code );
 		WC()->cart->calculate_totals();
@@ -303,6 +313,11 @@ class Ade_WooCart {
 
 		if ( null === WC()->cart ) {
 			WC()->cart = new WC_Cart();
+		}
+		// Handle session cookie for guest users.
+		$user = wp_get_current_user();
+		if ( 0 === $user->ID && WC()->session ) {
+			WC()->session->set_customer_session_cookie( true );
 		}
 		// Restore the cart for the session.
 		WC()->cart->get_cart_from_session();
@@ -427,6 +442,11 @@ class Ade_WooCart {
 	 */
 	public function remove_from_cart( WP_REST_Request $request ) {
 		$key = $request->get_param( 'key' );
+		// Handle session cookie for guest users.
+		$user = wp_get_current_user();
+		if ( 0 === $user->ID && WC()->session ) {
+			WC()->session->set_customer_session_cookie( true );
+		}
 		// confirm key exists.
 		if ( ! isset( WC()->cart->cart_contents[ $key ] ) ) {
 			return new WP_Error( 'key_not_found', 'Key not found', array( 'status' => 404 ) );
